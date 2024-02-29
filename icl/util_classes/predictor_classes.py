@@ -33,9 +33,12 @@ class Predictor:
     def get_pos(self, inputs):
         label_id_dict = self.label_id_dict
         pad_token_id = self.pad_token_id
-        final_pos = (inputs['input_ids'] != pad_token_id).int().sum(-1) - 1
         device = inputs['input_ids'].device
         bsz, sql = inputs['input_ids'].shape
+        if self.tokenizer.padding_side == "right":
+            final_pos = (inputs['input_ids'] != pad_token_id).int().sum(-1) - 1
+        else:
+            final_pos = inputs['input_ids'].shape[-1] - 1
         class_poss = []
         for idx in label_id_dict.values():
             class_idx = idx

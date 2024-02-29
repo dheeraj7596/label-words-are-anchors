@@ -1,5 +1,6 @@
 import warnings
 
+import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM
 
 from .load_local import load_local_model_or_tokenizer
@@ -15,6 +16,16 @@ def load_model_and_tokenizer(args: DeepArgs):
         if model is None:
             model = AutoModelForCausalLM.from_pretrained(args.model_name)
         tokenizer.pad_token = tokenizer.eos_token
+    elif "llama" in args.model_name:
+        tokenizer = AutoTokenizer.from_pretrained(args.model_name, padding_side='left', truncation_side="right")
+        tokenizer.pad_token = tokenizer.eos_token
+        model = AutoModelForCausalLM.from_pretrained(args.model_name,
+                                                     torch_dtype=torch.bfloat16,
+                                                     low_cpu_mem_usage=True,
+                                                     trust_remote_code=True,
+                                                     attn_implementation="eager",
+                                                     device_map="auto"
+                                                     )
     else:
         raise NotImplementedError(f"model_name: {args.model_name}")
     return model, tokenizer

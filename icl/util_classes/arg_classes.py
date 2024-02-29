@@ -17,7 +17,9 @@ def set_default_to_empty_string(v, default_v, activate_flag):
 @dataclass
 class DeepArgs:
     task_name: str = "sst2"
-    model_name: str = "gpt2-xl"
+    model_name: str = "/data/shared/llama-hf/llama-2-7b-hf"
+    # model_name: str = "/Users/dheerajmekala/Work/label-words-are-anchors/llama-7b/llama-2-7b-hf"
+    # model_name: str = "gpt2-xl"
     seeds: List[int] = field(default_factory=lambda: [42])
     sample_size: int = 1000
     demonstration_shot: int = 1
@@ -43,13 +45,17 @@ class DeepArgs:
         assert self.demonstration_from in ['train']
         assert self.sample_from in ['test']
         assert self.task_name in ['sst2', 'agnews', 'trec', 'emo']
-        assert self.model_name in ['gpt2-xl', 'gpt-j-6b']
+        assert self.model_name in ['gpt2-xl', 'gpt-j-6b'] or "llama" in self.model_name
         assert 'cuda:' in self.device
         self.gpu = int(self.device.split(':')[-1])
+        # self.gpu = -1
         self.actual_sample_size = self.sample_size
 
         if self.task_name == 'sst2':
-            label_dict = {0: ' Negative', 1: ' Positive'}
+            if self.model_name in ['gpt2-xl', 'gpt-j-6b']:
+                label_dict = {0: ' Negative', 1: ' Positive'}
+            elif "llama" in self.model_name:
+                label_dict = {0: 'negative', 1: 'positive'}
         elif self.task_name == 'agnews':
             label_dict = {0: ' World', 1: ' Sports', 2: ' Business', 3: ' Technology'}
         elif self.task_name == 'trec':
