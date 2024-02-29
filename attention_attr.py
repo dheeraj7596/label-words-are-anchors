@@ -33,7 +33,7 @@ from icl.utils.other import dict_to
 hf_parser = HfArgumentParser((AttrArgs,))
 args: AttrArgs = hf_parser.parse_args_into_dataclasses()[0]
 
-set_gpu(args.gpu)
+# set_gpu(args.gpu)
 if args.sample_from == 'test':
     dataset = load_huggingface_dataset_train_and_test(args.task_name)
 else:
