@@ -141,6 +141,9 @@ for idx, data in tqdm(enumerate(analysis_dataloader)):
     loss = F.cross_entropy(output['logits'], label)
     loss.backward()
     class_poss, final_poss = predictor.get_pos({'input_ids': attentionermanger.input_ids})
+    print("Class POSS", class_poss)
+    print("Final POSS", final_poss)
+    print("*" * 80)
     pros = []
     for i in range(len(attentionermanger.attention_adapters)):
         saliency = attentionermanger.grad(use_abs=True)[i]
