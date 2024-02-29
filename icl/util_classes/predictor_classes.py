@@ -38,7 +38,7 @@ class Predictor:
         if self.tokenizer.padding_side == "right":
             final_pos = (inputs['input_ids'] != pad_token_id).int().sum(-1) - 1
         else:
-            final_pos = inputs['input_ids'].shape[-1] - 1
+            final_pos = torch.tensor([inputs['input_ids'].shape[-1] - 1]).to(inputs['input_ids'].device)
         class_poss = []
         for idx in label_id_dict.values():
             class_idx = idx

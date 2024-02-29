@@ -115,7 +115,7 @@ def get_proportion(saliency, class_poss, final_poss):
     assert len(saliency.shape) == 2 or (len(saliency.shape) == 3 and saliency.shape[0] == 1)
     if len(saliency.shape) == 3:
         saliency = saliency.squeeze(0)
-    saliency = saliency.numpy()
+    saliency = saliency.to(torch.float32).numpy()
     np.fill_diagonal(saliency, 0)
     proportion1 = saliency[class_poss, :].sum()
     proportion2 = saliency[final_poss, class_poss].sum()
