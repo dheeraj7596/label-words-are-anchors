@@ -27,7 +27,7 @@ from datasets import concatenate_datasets
 from datasets.utils.logging import disable_progress_bar
 import icl.analysis.attentioner_for_attribution
 from icl.analysis.attentioner_for_attribution import AttentionAdapter, \
-    GPT2AttentionerManager, LlamaAttentionerManager
+    GPT2AttentionerManager, LlamaAttentionerManager, MistralAttentionerManager
 from icl.utils.other import dict_to
 
 hf_parser = HfArgumentParser((AttrArgs,))
@@ -93,8 +93,10 @@ demonstrations_contexted = prepare_analysis_dataset(args.seeds[0])
 
 if args.model_name in ['gpt2-xl']:
     attentionermanger = GPT2AttentionerManager(model.model)
-elif "llama" in args.model_name:
+elif "llama" in args.model_name.lower():
     attentionermanger = LlamaAttentionerManager(model.model)
+elif "mistral" in args.model_name.lower():
+    attentionermanger = MistralAttentionerManager(model.model)
 else:
     raise NotImplementedError(f"model_name: {args.model_name}")
 
