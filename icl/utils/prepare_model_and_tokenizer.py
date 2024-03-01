@@ -17,7 +17,7 @@ def load_model_and_tokenizer(args: DeepArgs):
         if model is None:
             model = AutoModelForCausalLM.from_pretrained(args.model_name)
         tokenizer.pad_token = tokenizer.eos_token
-    elif "llama" in args.model_name:
+    elif "llama" in args.model_name.lower() or "mistral" in args.model_name.lower():
         tokenizer = AutoTokenizer.from_pretrained(args.model_name, padding_side='left', truncation_side="right")
         tokenizer.pad_token = tokenizer.eos_token
         model = AutoModelForCausalLM.from_pretrained(args.model_name,

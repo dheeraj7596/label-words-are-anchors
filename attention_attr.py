@@ -93,7 +93,7 @@ demonstrations_contexted = prepare_analysis_dataset(args.seeds[0])
 
 if args.model_name in ['gpt2-xl']:
     attentionermanger = GPT2AttentionerManager(model.model)
-elif "llama" in args.model_name:
+elif "llama" in args.model_name.lower() or "mistral" in args.model_name.lower():
     attentionermanger = LlamaAttentionerManager(model.model)
 else:
     raise NotImplementedError(f"model_name: {args.model_name}")

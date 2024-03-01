@@ -45,7 +45,7 @@ class DeepArgs:
         assert self.demonstration_from in ['train']
         assert self.sample_from in ['test']
         assert self.task_name in ['sst2', 'agnews', 'trec', 'emo']
-        assert self.model_name in ['gpt2-xl', 'gpt-j-6b'] or "llama" in self.model_name
+        assert self.model_name in ['gpt2-xl', 'gpt-j-6b'] or "llama" in self.model_name.lower() or "mistral" in self.model_name.lower()
         assert 'cuda:' in self.device
         self.gpu = int(self.device.split(':')[-1])
         # self.gpu = -1
@@ -54,7 +54,7 @@ class DeepArgs:
         if self.task_name == 'sst2':
             if self.model_name in ['gpt2-xl', 'gpt-j-6b']:
                 label_dict = {0: ' Negative', 1: ' Positive'}
-            elif "llama" in self.model_name:
+            elif "llama" in self.model_name.lower() or "mistral" in self.model_name.lower():
                 label_dict = {0: ' negative', 1: ' positive'}
         elif self.task_name == 'agnews':
             label_dict = {0: ' World', 1: ' Sports', 2: ' Business', 3: ' Technology'}
