@@ -105,7 +105,7 @@ default_max_length_dict = {
 def get_max_length(tokenizer):
     if tokenizer.name_or_path in default_max_length_dict:
         return default_max_length_dict[tokenizer.name_or_path]
-    elif 'llama' in tokenizer.name_or_path:
+    elif "llama" in tokenizer.name_or_path.lower() or "mistral" in tokenizer.name_or_path.lower():
         return 4096
     max_length = tokenizer.max_len_single_sentence
     if max_length > 10000000:
