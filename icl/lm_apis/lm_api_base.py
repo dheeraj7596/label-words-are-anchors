@@ -22,7 +22,7 @@ class LMForwardAPI(nn.Module):
         self.probs_from_results_fn = None
         self.results_args: dict = {}
         if label_id_dict is not None:
-            self.label_map = {v:k for k, v in label_dict.items()}
+            self.label_map = {v:k for k, v in label_id_dict.items()}
         else:
             self.label_map = {tokenizer.encode(v, add_special_tokens=False)[0]: k for k, v in label_dict.items()}
         self.position_offset = 0
