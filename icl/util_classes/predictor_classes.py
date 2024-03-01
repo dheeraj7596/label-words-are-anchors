@@ -16,8 +16,9 @@ class Predictor:
         self.layer = layer
 
         if task_name == 'sst2':
-            self.prefix_idxs = [tokenizer.encode('Sentiment', add_special_tokens=False)[-1],
-                                tokenizer.encode(':', add_special_tokens=False)[0]]
+            # self.prefix_idxs = [tokenizer.encode('Sentiment', add_special_tokens=False)[-1],
+            #                     tokenizer.encode(':', add_special_tokens=False)[0]]
+            self.prefix_idxs = tokenizer.encode('\nSentiment:', add_special_tokens=False)[-2:]
         elif task_name == 'agnews':
             self.prefix_idxs = [tokenizer.encode('Answer', add_special_tokens=False)[-1],
                                 tokenizer.encode(':', add_special_tokens=False)[0]]
@@ -49,7 +50,7 @@ class Predictor:
             input_ids[:, 2:] += inputs['input_ids'][:, :-2] * 100000 * 100000
             class_pos = torch.arange(sql, device=device).unsqueeze(0).repeat(bsz, 1)[
                 input_ids == class_idx].squeeze()
-            assert len(class_pos.size()) != 0
+            assert class_pos.numel() != 0
             class_poss.append(class_pos)
         return class_poss, final_pos
 

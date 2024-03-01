@@ -1,7 +1,7 @@
 import datasets
 
 format_s_dict = {
-    'sst2': 'Review: {text}\nSentiment: {label}',
+    'sst2': 'Review: {text}\nSentiment:{label}',
     'agnews': 'Article: {text}\nAnswer:{label}',
     'trec': 'Question: {question}\nAnswer Type:{label}',
     'emo': 'Dialogue: {text}\nEmotion:{label}',

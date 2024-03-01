@@ -8,7 +8,7 @@ from icl.utils.other import dict_to
 
 
 class LMForwardAPI(nn.Module):
-    def __init__(self, model, model_name, tokenizer, label_dict: Dict[int, str], device='cuda:0'):
+    def __init__(self, model, model_name, tokenizer, label_dict: Dict[int, str]=None, label_id_dict=None, device='cuda:0'):
         super().__init__()
         self._use_past_key_values = False
         self._past_key_values = None
@@ -21,8 +21,10 @@ class LMForwardAPI(nn.Module):
         self.use_calibration_probs = False
         self.probs_from_results_fn = None
         self.results_args: dict = {}
-        self.label_map = {tokenizer.encode(v, add_special_tokens=False)[0]: k for k, v in
-                          label_dict.items()}
+        if label_id_dict is not None:
+            self.label_map = {v:k for k, v in label_dict.items()}
+        else:
+            self.label_map = {tokenizer.encode(v, add_special_tokens=False)[0]: k for k, v in label_dict.items()}
         self.position_offset = 0
 
         assert model_name in ['gpt2-xl', 'gpt-j-6b'] or "llama" in model_name

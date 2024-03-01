@@ -3,6 +3,7 @@ import warnings
 import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM
 
+from .data_wrapper import format_s_dict
 from .load_local import load_local_model_or_tokenizer
 from ..util_classes.arg_classes import DeepArgs
 
@@ -32,10 +33,17 @@ def load_model_and_tokenizer(args: DeepArgs):
 
 
 def get_label_id_dict_for_args(args: DeepArgs, tokenizer):
-    label_id_dict = {k: tokenizer.encode(v, add_special_tokens=False)[0] for k, v in
-                          args.label_dict.items()}
-    for v in args.label_dict.values():
-        token_num = len(tokenizer.encode(v, add_special_tokens=False))
-        if token_num != 1:
-            warnings.warn(f"{v} in {args.task_name} has token_num: {token_num} which is not 1")
+    task_name = args.task_name
+    format_s = "\n" + format_s_dict[task_name].split("\n")[-1].strip()
+    label_id_dict = {}
+    for k, v in args.label_dict.items():
+        temp_str = format_s.format_map({"label": v})
+        token_ids = tokenizer.encode(temp_str, add_special_tokens=False)
+        label_id_dict[k] = token_ids[-1]
+    # label_id_dict = {k: tokenizer.encode(v, add_special_tokens=False)[0] for k, v in
+    #                       args.label_dict.items()}
+    # for v in args.label_dict.values():
+    #     token_num = len(tokenizer.encode(v, add_special_tokens=False))
+    #     if token_num != 1:
+    #         warnings.warn(f"{v} in {args.task_name} has token_num: {token_num} which is not 1")
     return label_id_dict

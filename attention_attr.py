@@ -41,12 +41,13 @@ else:
 
 model, tokenizer = load_model_and_tokenizer(args)
 args.label_id_dict = get_label_id_dict_for_args(args, tokenizer)
+print(args.label_id_dict)
 
 # model = model.half()
 
 model = LMForwardAPI(model=model, model_name=args.model_name, tokenizer=tokenizer,
                      device='cuda:0',
-                     label_dict=args.label_dict)
+                     label_id_dict=args.label_id_dict)
 
 
 num_layer = get_model_layer_num(model=model.model, model_name=args.model_name)

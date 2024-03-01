@@ -55,7 +55,7 @@ class DeepArgs:
             if self.model_name in ['gpt2-xl', 'gpt-j-6b']:
                 label_dict = {0: ' Negative', 1: ' Positive'}
             elif "llama" in self.model_name:
-                label_dict = {0: 'negative', 1: 'positive'}
+                label_dict = {0: ' negative', 1: ' positive'}
         elif self.task_name == 'agnews':
             label_dict = {0: ' World', 1: ' Sports', 2: ' Business', 3: ' Technology'}
         elif self.task_name == 'trec':
@@ -69,7 +69,8 @@ class DeepArgs:
         self.label_dict = label_dict
 
     def load_result(self):
-        with open(self.save_file_name, 'rb') as f:
+        # with open(self.save_file_name, 'rb') as f:
+        with open("results/llama-2-7b-hf_1_train_test_1000_42_None", 'rb') as f:
             return pickle.load(f)
 
 
