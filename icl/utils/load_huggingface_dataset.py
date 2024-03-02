@@ -43,6 +43,10 @@ def load_huggingface_dataset_train_and_test(task_name):
             dataset = load_from_local(task_name, ['train', 'test'])
         except FileNotFoundError:
             dataset = load_dataset('emo', split=['train', 'test'])
+    elif task_name == "verbose_multiarith":
+        dataset = load_dataset("ChilleD/MultiArith", split=['train', 'test'])
+        for i, _ in enumerate(dataset):
+            dataset[i] = dataset[i].rename_column("final_ans", 'label')
     if dataset is None:
         raise NotImplementedError(f"task_name: {task_name}")
     dataset = {'train': dataset[0], 'test': dataset[1]}

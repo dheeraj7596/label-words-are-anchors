@@ -33,6 +33,8 @@ def load_model_and_tokenizer(args: DeepArgs):
 
 
 def get_label_id_dict_for_args(args: DeepArgs, tokenizer):
+    if args.task_name.startswith("verbose"):
+        return None
     task_name = args.task_name
     format_s = "\n" + format_s_dict[task_name].split("\n")[-1].strip()
     label_id_dict = {}

@@ -19,15 +19,22 @@ class Predictor:
             # self.prefix_idxs = [tokenizer.encode('Sentiment', add_special_tokens=False)[-1],
             #                     tokenizer.encode(':', add_special_tokens=False)[0]]
             self.prefix_idxs = tokenizer.encode('\nSentiment:', add_special_tokens=False)[-2:]
+            self.suffix_ids = []
         elif task_name == 'agnews':
             self.prefix_idxs = [tokenizer.encode('Answer', add_special_tokens=False)[-1],
                                 tokenizer.encode(':', add_special_tokens=False)[0]]
+            self.suffix_ids = []
         elif task_name == 'trec':
             self.prefix_idxs = [tokenizer.encode(' Type', add_special_tokens=False)[-1],
                                 tokenizer.encode(':', add_special_tokens=False)[0]]
+            self.suffix_ids = []
         elif task_name == 'emo':
             self.prefix_idxs = [tokenizer.encode('Emotion', add_special_tokens=False)[-1],
                                 tokenizer.encode(':', add_special_tokens=False)[0]]
+            self.suffix_ids = []
+        elif task_name.startswith("verbose"):
+            self.prefix_idxs = []
+            self.suffix_ids = tokenizer.encode('\nA:', add_special_tokens=False)[-2:]
         else:
             raise NotImplementedError(f"task_name: {task_name}")
 
@@ -42,12 +49,20 @@ class Predictor:
             final_pos = torch.tensor([inputs['input_ids'].shape[-1] - 1]).to(inputs['input_ids'].device)
         class_poss = []
         for idx in label_id_dict.values():
-            class_idx = idx
-            for offset, prefix_idx in enumerate(reversed(self.prefix_idxs)):
-                class_idx += prefix_idx * 100000 ** (offset + 1)
-            input_ids = inputs['input_ids'].detach().clone()
-            input_ids[:, 1:] += inputs['input_ids'][:, :-1] * 100000
-            input_ids[:, 2:] += inputs['input_ids'][:, :-2] * 100000 * 100000
+            if len(self.prefix_idxs) > 0:
+                class_idx = idx
+                for offset, prefix_idx in enumerate(reversed(self.prefix_idxs)):
+                    class_idx += prefix_idx * 100000 ** (offset + 1)
+                input_ids = inputs['input_ids'].detach().clone()
+                input_ids[:, 1:] += inputs['input_ids'][:, :-1] * 100000
+                input_ids[:, 2:] += inputs['input_ids'][:, :-2] * 100000 * 100000
+            elif len(self.suffix_ids) > 0:
+                class_idx = idx
+                for offset, suffix_idx in enumerate(self.suffix_ids):
+                    class_idx += suffix_idx * 100000 ** (offset + 1)
+                input_ids = inputs['input_ids'].detach().clone()
+                input_ids[:, :-1] += inputs['input_ids'][:, 1:] * 100000
+                input_ids[:, :-2] += inputs['input_ids'][:, 2:] * 100000 * 100000
             class_pos = torch.arange(sql, device=device).unsqueeze(0).repeat(bsz, 1)[
                 input_ids == class_idx].squeeze()
             assert class_pos.numel() != 0

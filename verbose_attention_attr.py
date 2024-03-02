@@ -10,7 +10,7 @@ import torch
 import torch.nn.functional as F
 
 from icl.lm_apis.lm_api_base import LMForwardAPI
-from icl.utils.data_wrapper import wrap_dataset, tokenize_dataset
+from icl.utils.data_wrapper import wrap_dataset, tokenize_dataset_verbose
 from icl.utils.load_huggingface_dataset import load_huggingface_dataset_train_and_test
 from icl.utils.prepare_model_and_tokenizer import load_model_and_tokenizer, \
     get_label_id_dict_for_args
@@ -51,7 +51,8 @@ model = LMForwardAPI(model=model, model_name=args.model_name, tokenizer=tokenize
 
 
 num_layer = get_model_layer_num(model=model.model, model_name=args.model_name)
-predictor = Predictor(label_id_dict=args.label_id_dict, pad_token_id=tokenizer.pad_token_id,
+label_id_dict_for_predictor = {0: tokenizer.encode("\n", add_special_tokens=False)[-1]}
+predictor = Predictor(label_id_dict=label_id_dict_for_predictor, pad_token_id=tokenizer.pad_token_id,
                       task_name=args.task_name, tokenizer=tokenizer, layer=num_layer)
 
 
@@ -67,9 +68,7 @@ def prepare_analysis_dataset(seed):
         raise NotImplementedError(f"sample_from: {args.sample_from}")
     disable_progress_bar()
     demonstration = dataset['train']
-    class_num = len(set(demonstration['label']))
-    np_labels = np.array(demonstration['label'])
-    ids_for_demonstrations = [np.where(np_labels == class_id)[0] for class_id in range(class_num)]
+    ids_for_demonstrations = [range(len(dataset["train"]))]
     demonstrations_contexted = []
     np.random.seed(seed)
     for i in range(len(test_sample)):
@@ -85,7 +84,7 @@ def prepare_analysis_dataset(seed):
     demonstrations_contexted = concatenate_datasets(demonstrations_contexted)
     demonstrations_contexted = demonstrations_contexted.filter(
         lambda x: len(tokenizer(x["sentence"])['input_ids']) <= tokenizer.max_len_single_sentence)
-    demonstrations_contexted = tokenize_dataset(demonstrations_contexted, tokenizer=tokenizer)
+    demonstrations_contexted = tokenize_dataset_verbose(demonstrations_contexted, tokenizer=tokenizer)
     return demonstrations_contexted
 
 

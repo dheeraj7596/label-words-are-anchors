@@ -23,8 +23,10 @@ class LMForwardAPI(nn.Module):
         self.results_args: dict = {}
         if label_id_dict is not None:
             self.label_map = {v:k for k, v in label_id_dict.items()}
-        else:
+        elif label_dict is not None:
             self.label_map = {tokenizer.encode(v, add_special_tokens=False)[0]: k for k, v in label_dict.items()}
+        else:
+            self.label_map = {}
         self.position_offset = 0
 
         assert model_name in ['gpt2-xl', 'gpt-j-6b'] or "llama" in model_name.lower() or "mistral" in model_name.lower()
@@ -82,7 +84,8 @@ class LMForwardAPI(nn.Module):
 
     def _cal_probs(self, logits):
         interest_index = list(self.label_map.keys())
-        logits = logits[:, interest_index]
+        if len(interest_index) != 0:
+            logits = logits[:, interest_index]
         probs = F.softmax(logits, dim=-1)
         if self.use_calibration_probs:
             assert self.calibration_probs is not None
