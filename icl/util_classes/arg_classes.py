@@ -17,8 +17,8 @@ def set_default_to_empty_string(v, default_v, activate_flag):
 @dataclass
 class DeepArgs:
     task_name: str = "sst2"
+    # model_name: str = "/data/shared/hf-models/Mistral-7B-v0.1/"
     model_name: str = "/data/shared/llama-hf/llama-2-7b-hf"
-    # model_name: str = "/Users/dheerajmekala/Work/label-words-are-anchors/llama-7b/llama-2-7b-hf"
     # model_name: str = "gpt2-xl"
     seeds: List[int] = field(default_factory=lambda: [42])
     sample_size: int = 1000
@@ -70,7 +70,7 @@ class DeepArgs:
 
     def load_result(self):
         # with open(self.save_file_name, 'rb') as f:
-        with open("results/llama-2-7b-hf_1_train_test_1000_42_None", 'rb') as f:
+        with open("results/_1_train_test_1000_42_None", 'rb') as f:
             return pickle.load(f)
 
 
