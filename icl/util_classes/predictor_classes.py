@@ -64,7 +64,9 @@ class Predictor:
                 input_ids[:, :-1] += inputs['input_ids'][:, 1:] * 100000
                 input_ids[:, :-2] += inputs['input_ids'][:, 2:] * 100000 * 100000
             class_pos = torch.arange(sql, device=device).unsqueeze(0).repeat(bsz, 1)[
-                input_ids == class_idx].squeeze()[:2]
+                input_ids == class_idx].squeeze()
+            if self.task_name.startswith("verbose"):
+                class_pos = class_pos[:2]
             assert class_pos.numel() != 0
             class_poss.append(class_pos)
         return class_poss, final_pos
