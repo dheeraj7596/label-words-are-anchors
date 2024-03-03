@@ -46,7 +46,13 @@ def load_huggingface_dataset_train_and_test(task_name):
     elif task_name == "verbose_multiarith":
         dataset = load_dataset("ChilleD/MultiArith", split=['train', 'test'])
         for i, _ in enumerate(dataset):
+            dataset[i] = dataset[i].rename_column("question", 'text')
             dataset[i] = dataset[i].rename_column("final_ans", 'label')
+    elif task_name == "verbose_gsm8k":
+        dataset = load_dataset("gsm8k", 'main', split=['train', 'test'])
+        for i, _ in enumerate(dataset):
+            dataset[i] = dataset[i].rename_column("question", 'text')
+            dataset[i] = dataset[i].rename_column("answer", 'label')
     if dataset is None:
         raise NotImplementedError(f"task_name: {task_name}")
     dataset = {'train': dataset[0], 'test': dataset[1]}

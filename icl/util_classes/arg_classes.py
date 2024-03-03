@@ -16,7 +16,7 @@ def set_default_to_empty_string(v, default_v, activate_flag):
 
 @dataclass
 class DeepArgs:
-    task_name: str = "verbose_multiarith"
+    task_name: str = "verbose_gsm8k"
     # model_name: str = "/data/shared/hf-models/Mistral-7B-v0.1/"
     model_name: str = "/data/shared/llama-hf/llama-2-7b-hf"
     # model_name: str = "gpt2-xl"
@@ -44,7 +44,7 @@ class DeepArgs:
     def __post_init__(self):
         assert self.demonstration_from in ['train']
         assert self.sample_from in ['test']
-        assert self.task_name in ['sst2', 'agnews', 'trec', 'emo', 'verbose_multiarith']
+        assert self.task_name in ['sst2', 'agnews', 'trec', 'emo', 'verbose_multiarith', 'verbose_gsm8k']
         assert self.model_name in ['gpt2-xl', 'gpt-j-6b'] or "llama" in self.model_name.lower() or "mistral" in self.model_name.lower()
         assert 'cuda:' in self.device
         self.gpu = int(self.device.split(':')[-1])
@@ -64,7 +64,7 @@ class DeepArgs:
                           5: ' Number'}
         elif self.task_name == 'emo':
             label_dict = {0: ' Others', 1: ' Happy', 2: ' Sad', 3: ' Angry'}
-        elif self.task_name == "verbose_multiarith":
+        elif self.task_name in ["verbose_multiarith", "verbose_gsm8k"]:
             label_dict = {}
         else:
             raise NotImplementedError(f"task_name: {self.task_name}")

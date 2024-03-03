@@ -6,7 +6,8 @@ format_s_dict = {
     'agnews': 'Article: {text}\nAnswer:{label}',
     'trec': 'Question: {question}\nAnswer Type:{label}',
     'emo': 'Dialogue: {text}\nEmotion:{label}',
-    'verbose_multiarith': 'Q: {text}\nA:{label}'
+    'verbose_multiarith': 'Q: {text}\nA:{label}',
+    'verbose_gsm8k': 'Q: {text}\nA:{label}'
 }
 
 
@@ -54,7 +55,17 @@ def agnews_wrap_data(demonstrations, input_sample, label_dict):
 
 def verbose_multiarith_wrap_data(demonstrations, input_sample, label_dict):
     format_s = format_s_dict['verbose_multiarith']
-    prompts = [format_s.format(text=sample['text'], label=label_dict[sample['label']]) for
+    prompts = [format_s.format(text=sample['text'], label=" " + sample['label']) for
+               sample in demonstrations]
+    inputs = format_s.format(text=input_sample['text'], label="")
+    if len(prompts) > 0:
+        inputs = "\n".join(prompts + [inputs])
+    return inputs
+
+
+def verbose_gsm8k_wrap_data(demonstrations, input_sample, label_dict):
+    format_s = format_s_dict['verbose_gsm8k']
+    prompts = [format_s.format(text=sample['text'], label=" " + sample['label']) for
                sample in demonstrations]
     inputs = format_s.format(text=input_sample['text'], label="")
     if len(prompts) > 0:
@@ -73,6 +84,8 @@ def wrap_data(demonstrations, input_sample, label_dict, task_name):
         return emo_wrap_data(demonstrations, input_sample, label_dict)
     elif task_name == "verbose_multiarith":
         return verbose_multiarith_wrap_data(demonstrations, input_sample, label_dict)
+    elif task_name == "verbose_gsm8k":
+        return verbose_gsm8k_wrap_data(demonstrations, input_sample, label_dict)
     else:
         raise NotImplementedError(f"task_name: {task_name}")
 
@@ -144,16 +157,18 @@ def tokenize_dataset(dataset, tokenizer):
 def tokenize_dataset_verbose(dataset, tokenizer):
     def tokenize_function(example):
         orig_q = example["sentence"]
-        q_a = example["sentence"] + example["labels"]
+        q_a = example["sentence"] + " " + example["labels"]
         temp_inputids = tokenizer.encode(orig_q, return_tensors="pt")[0]
         temp_inputids_qa = tokenizer.encode(q_a, return_tensors="pt")[0]
         assert torch.equal(temp_inputids, temp_inputids_qa[:len(temp_inputids)])
         label = temp_inputids_qa[len(temp_inputids)].item()
-        example["labels"] = label
-        return tokenizer(example["sentence"], padding=True,
+        new_example = tokenizer(example["sentence"], padding=True,
                          max_length=get_max_length(tokenizer),
                          truncation=True,
                          return_tensors='pt')
+        new_example.data["labels"] = label
+        new_example.data["label"] = label
+        return new_example
 
     tokenized_datasets = dataset.map(tokenize_function)
     return tokenized_datasets
