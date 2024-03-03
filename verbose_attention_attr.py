@@ -138,7 +138,7 @@ for idx, data in tqdm(enumerate(analysis_dataloader)):
     data = dict_to(data, model.device)
     print(data['input_ids'].shape)
     attentionermanger.zero_grad()
-    output = model(**data)
+    output = model(input_ids=data["input_ids"].squeeze(dim=0), attention_mask=data["attention_mask"].squeeze(dim=0))
     label = data['labels']
     loss = F.cross_entropy(output['logits'], label)
     loss.backward()
