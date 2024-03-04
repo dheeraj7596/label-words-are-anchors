@@ -6,7 +6,8 @@ import torch
 class Predictor:
     def __init__(self, label_id_dict, pad_token_id, task_name, tokenizer, layer,
                  naive_class_embs=None,
-                 naive_final_emb=None) -> None:
+                 naive_final_emb=None,
+                 ignore_last=False) -> None:
         self.naive_class_embs = naive_class_embs
         self.naive_final_emb = naive_final_emb
         self.label_id_dict = label_id_dict
@@ -14,6 +15,7 @@ class Predictor:
         self.task_name = task_name
         self.tokenizer = tokenizer
         self.layer = layer
+        self.ignore_last = ignore_last
 
         if task_name == 'sst2':
             # self.prefix_idxs = [tokenizer.encode('Sentiment', add_special_tokens=False)[-1],
@@ -34,7 +36,7 @@ class Predictor:
             self.suffix_ids = []
         elif task_name.startswith("verbose"):
             self.prefix_idxs = []
-            self.suffix_ids = tokenizer.encode('\nA:', add_special_tokens=False)[-2:]
+            self.suffix_ids = tokenizer.encode('\nQ:', add_special_tokens=False)[-2:]
         else:
             raise NotImplementedError(f"task_name: {task_name}")
 
@@ -65,7 +67,7 @@ class Predictor:
                 input_ids[:, :-2] += inputs['input_ids'][:, 2:] * 100000 * 100000
             class_pos = torch.arange(sql, device=device).unsqueeze(0).repeat(bsz, 1)[
                 input_ids == class_idx].squeeze()
-            if self.task_name.startswith("verbose"):
+            if self.ignore_last:
                 class_pos = class_pos[:-1]
             assert class_pos.numel() != 0
             class_poss.append(class_pos)
