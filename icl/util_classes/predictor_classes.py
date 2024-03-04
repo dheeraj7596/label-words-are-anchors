@@ -7,7 +7,7 @@ class Predictor:
     def __init__(self, label_id_dict, pad_token_id, task_name, tokenizer, layer,
                  naive_class_embs=None,
                  naive_final_emb=None,
-                 ignore_last=False) -> None:
+                 is_prefix=False) -> None:
         self.naive_class_embs = naive_class_embs
         self.naive_final_emb = naive_final_emb
         self.label_id_dict = label_id_dict
@@ -15,7 +15,7 @@ class Predictor:
         self.task_name = task_name
         self.tokenizer = tokenizer
         self.layer = layer
-        self.ignore_last = ignore_last
+        self.is_prefix = is_prefix
 
         if task_name == 'sst2':
             # self.prefix_idxs = [tokenizer.encode('Sentiment', add_special_tokens=False)[-1],
@@ -35,8 +35,13 @@ class Predictor:
                                 tokenizer.encode(':', add_special_tokens=False)[0]]
             self.suffix_ids = []
         elif task_name.startswith("verbose"):
-            self.prefix_idxs = []
-            self.suffix_ids = tokenizer.encode('\nQ:', add_special_tokens=False)[-2:]
+            if self.is_prefix:
+                self.label_id_dict = None
+                self.prefix_idxs = tokenizer.encode('\nA:', add_special_tokens=False)[-2:]
+                self.suffix_ids = []
+            else:
+                self.prefix_idxs = []
+                self.suffix_ids = tokenizer.encode('\nQ:', add_special_tokens=False)[-2:]
         else:
             raise NotImplementedError(f"task_name: {task_name}")
 
@@ -50,27 +55,38 @@ class Predictor:
         else:
             final_pos = torch.tensor([inputs['input_ids'].shape[-1] - 1]).to(inputs['input_ids'].device)
         class_poss = []
-        for idx in label_id_dict.values():
+        if label_id_dict is not None:
+            for idx in label_id_dict.values():
+                if len(self.prefix_idxs) > 0:
+                    class_idx = idx
+                    for offset, prefix_idx in enumerate(reversed(self.prefix_idxs)):
+                        class_idx += prefix_idx * 100000 ** (offset + 1)
+                    input_ids = inputs['input_ids'].detach().clone()
+                    input_ids[:, 1:] += inputs['input_ids'][:, :-1] * 100000
+                    input_ids[:, 2:] += inputs['input_ids'][:, :-2] * 100000 * 100000
+                elif len(self.suffix_ids) > 0:
+                    class_idx = idx
+                    for offset, suffix_idx in enumerate(self.suffix_ids):
+                        class_idx += suffix_idx * 100000 ** (offset + 1)
+                    input_ids = inputs['input_ids'].detach().clone()
+                    input_ids[:, :-1] += inputs['input_ids'][:, 1:] * 100000
+                    input_ids[:, :-2] += inputs['input_ids'][:, 2:] * 100000 * 100000
+                class_pos = torch.arange(sql, device=device).unsqueeze(0).repeat(bsz, 1)[
+                    input_ids == class_idx].squeeze()
+                assert class_pos.numel() != 0
+                class_poss.append(class_pos)
+        else:
             if len(self.prefix_idxs) > 0:
-                class_idx = idx
+                class_idx = 0
                 for offset, prefix_idx in enumerate(reversed(self.prefix_idxs)):
                     class_idx += prefix_idx * 100000 ** (offset + 1)
-                input_ids = inputs['input_ids'].detach().clone()
-                input_ids[:, 1:] += inputs['input_ids'][:, :-1] * 100000
-                input_ids[:, 2:] += inputs['input_ids'][:, :-2] * 100000 * 100000
-            elif len(self.suffix_ids) > 0:
-                class_idx = idx
-                for offset, suffix_idx in enumerate(self.suffix_ids):
-                    class_idx += suffix_idx * 100000 ** (offset + 1)
-                input_ids = inputs['input_ids'].detach().clone()
-                input_ids[:, :-1] += inputs['input_ids'][:, 1:] * 100000
-                input_ids[:, :-2] += inputs['input_ids'][:, 2:] * 100000 * 100000
-            class_pos = torch.arange(sql, device=device).unsqueeze(0).repeat(bsz, 1)[
-                input_ids == class_idx].squeeze()
-            if self.ignore_last:
-                class_pos = class_pos[:-1]
-            assert class_pos.numel() != 0
-            class_poss.append(class_pos)
+                input_ids = inputs['input_ids'].detach().clone() * 100000
+                input_ids[:, 1:] += inputs['input_ids'][:, :-1] * 100000 * 100000
+                class_pos = torch.arange(sql, device=device).unsqueeze(0).repeat(bsz, 1)[
+                    input_ids == class_idx].squeeze()
+                class_pos = class_pos[:-1] + 1
+                assert class_pos.numel() != 0
+                class_poss.append(class_pos)
         return class_poss, final_pos
 
     def _cal_all_key_and_values_of_class(self, inputs, past_key_values, one_class_one_list=False,
