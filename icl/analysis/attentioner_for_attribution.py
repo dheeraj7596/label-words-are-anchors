@@ -365,7 +365,7 @@ class AttentionAdapter(AttentionAdapterBase):
         self.attn_weights = None
 
     def _forward(self, attn_weights):
-        self.attn_weights = attn_weights
+        self.attn_weights = attn_weights.detach().cpu()
         if self.params is None:
             self.params = torch.ones_like(attn_weights, requires_grad=True)
         else:
