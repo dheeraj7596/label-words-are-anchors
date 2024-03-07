@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from typing import List
 import os
 import numpy as np
+import transformers
 from accelerate import Accelerator
 from tqdm import tqdm
 from transformers.hf_argparser import HfArgumentParser
@@ -31,6 +32,40 @@ import icl.analysis.attentioner_for_attribution
 from icl.analysis.attentioner_for_attribution import AttentionAdapter, \
     GPT2AttentionerManager, LlamaAttentionerManager, MistralAttentionerManager
 from icl.utils.other import dict_to
+
+@dataclass
+class DataCollatorForSupervisedDataset(object):
+    """Collate examples for supervised fine-tuning."""
+
+    tokenizer: transformers.PreTrainedTokenizer
+
+    def __call__(self, instances):
+        input_ids, labels, _ = tuple([instance[key] for instance in instances] for key in ("input_ids", "labels", "attention_mask"))
+        input_ids = torch.nn.utils.rnn.pad_sequence(
+            input_ids, batch_first=True, padding_value=self.tokenizer.pad_token_id
+        )
+        return dict(
+            input_ids=input_ids,
+            labels=labels,
+            attention_mask=input_ids.ne(self.tokenizer.pad_token_id),
+        )
+
+
+class SupervisedDataset(Dataset):
+    """Dataset for supervised fine-tuning."""
+
+    def __init__(self, texts, tokenizer):
+        data_dict = tokenize_function(texts, tokenizer)
+        self.tokenizer = tokenizer
+        self.input_ids = data_dict["input_ids"]
+        self.labels = data_dict["labels"]
+
+    def __len__(self):
+        return len(self.input_ids)
+
+    def __getitem__(self, i):
+        return dict(input_ids=self.input_ids[i], labels=self.labels[i], attention_mask=self.input_ids[i].ne(self.tokenizer.pad_token_id))
+
 
 hf_parser = HfArgumentParser((AttrArgs,))
 args: AttrArgs = hf_parser.parse_args_into_dataclasses()[0]
@@ -97,21 +132,6 @@ model = LMForwardAPI(model=model, model_name=args.model_name, tokenizer=tokenize
 
 num_layer = get_model_layer_num(model=model.model, model_name=args.model_name)
 
-class SupervisedDataset(Dataset):
-    """Dataset for supervised fine-tuning."""
-
-    def __init__(self, texts, tokenizer):
-        data_dict = tokenize_function(texts, tokenizer)
-        self.tokenizer = tokenizer
-        self.input_ids = data_dict["input_ids"]
-        self.labels = data_dict["labels"]
-
-    def __len__(self):
-        return len(self.input_ids)
-
-    def __getitem__(self, i):
-        return dict(input_ids=self.input_ids[i], labels=self.labels[i], attention_mask=self.input_ids[i].ne(self.tokenizer.pad_token_id))
-
 
 def get_start_label_ind(inputs):
     global cot
@@ -148,7 +168,7 @@ def tokenize_function(texts, tokenizer):
         seq_len = new_example["input_ids"].shape[-1]
         temp_inputids = new_example["input_ids"]
         for i in range(ind, seq_len):
-            inputids = temp_inputids[:, :i]
+            inputids = temp_inputids[:, :i].squeeze(dim=0)
             label = temp_inputids[:, i].squeeze(dim=0)
             data_dict["input_ids"].append(inputids)
             data_dict["labels"].append(label)
@@ -156,6 +176,7 @@ def tokenize_function(texts, tokenizer):
 
 
 demonstrations_contexted = SupervisedDataset(texts, tokenizer)
+data_collator = DataCollatorForSupervisedDataset(tokenizer=tokenizer)
 
 if args.model_name in ['gpt2-xl']:
     attentionermanger = GPT2AttentionerManager(model.model)
@@ -170,8 +191,8 @@ training_args = TrainingArguments("./output_dir", remove_unused_columns=False,
                                   # no_cuda=True,
                                   per_device_eval_batch_size=1,
                                   per_device_train_batch_size=1)
-trainer = Trainer(model=model, args=training_args)
-analysis_dataloader = trainer.get_eval_dataloader(demonstrations_contexted)
+trainer = Trainer(model=model, args=training_args, data_collator=data_collator, eval_dataset=demonstrations_contexted)
+analysis_dataloader = trainer.get_eval_dataloader()
 
 
 for p in model.parameters():
