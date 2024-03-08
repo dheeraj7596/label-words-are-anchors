@@ -3,7 +3,6 @@ import transformers
 from tqdm import tqdm
 import torch
 import torch.nn.functional as F
-from icl.lm_apis.lm_api_base import LMForwardAPI
 from icl.utils.data_wrapper import get_max_length
 from icl.utils.prepare_model_and_tokenizer import load_model_and_tokenizer
 from transformers import Trainer, TrainingArguments
@@ -22,13 +21,20 @@ class DataCollatorForSupervisedDataset(object):
     tokenizer: transformers.PreTrainedTokenizer
 
     def __call__(self, instances):
-        input_ids, labels, _ = tuple(
-            [instance[key] for instance in instances] for key in ("input_ids", "labels", "attention_mask"))
+        input_ids = []
+        labels = []
+        for key in ["input_ids", "labels"]:
+            for instance in instances:
+                if key == "input_ids":
+                    input_ids.append(instance[key].flip(dims=[-1]))
+                elif key == "labels":
+                    labels.append(instance[key])
+
         input_ids = torch.nn.utils.rnn.pad_sequence(
             input_ids, batch_first=True, padding_value=self.tokenizer.pad_token_id
         )
         return dict(
-            input_ids=input_ids,
+            input_ids=input_ids.flip(dims=[-1]),
             labels=labels,
             attention_mask=input_ids.ne(self.tokenizer.pad_token_id),
         )
@@ -124,20 +130,17 @@ A: {answer}"""
         texts.append(prompt.format_map({"question": q, "answer": a}))
 
     model, tokenizer = load_model_and_tokenizer(args)
-
-    model = LMForwardAPI(model=model, model_name=args.model_name, tokenizer=tokenizer)
-
-    num_layer = get_model_layer_num(model=model.model, model_name=args.model_name)
+    num_layer = get_model_layer_num(model=model, model_name=args.model_name)
 
     demonstrations_contexted = SupervisedDataset(texts, tokenizer)
     data_collator = DataCollatorForSupervisedDataset(tokenizer=tokenizer)
 
     if args.model_name in ['gpt2-xl']:
-        attentionermanger = GPT2AttentionerManager(model.model)
+        attentionermanger = GPT2AttentionerManager(model)
     elif "llama" in args.model_name.lower():
-        attentionermanger = LlamaAttentionerManager(model.model)
+        attentionermanger = LlamaAttentionerManager(model)
     elif "mistral" in args.model_name.lower():
-        attentionermanger = MistralAttentionerManager(model.model)
+        attentionermanger = MistralAttentionerManager(model)
     else:
         raise NotImplementedError(f"model_name: {args.model_name}")
 
@@ -154,12 +157,11 @@ A: {answer}"""
 
     total_attn_weights = []
     for idx, data in tqdm(enumerate(analysis_dataloader)):
-        # data = dict_to(data, model.device)
         print(data['input_ids'].shape)
         attentionermanger.zero_grad()
         output = model(input_ids=data["input_ids"], attention_mask=data["attention_mask"])
         label = data['labels']
-        print("LABEL:", tokenizer.decode(label))
+        print("LABEL:", data['labels'], data['labels'].shape)
         loss = F.cross_entropy(output['logits'], label)
         loss.backward()
         # sample_attn_weights = []
