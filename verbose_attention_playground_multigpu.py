@@ -5,7 +5,7 @@ import torch
 import torch.nn.functional as F
 from icl.utils.data_wrapper import get_max_length
 from icl.utils.prepare_model_and_tokenizer import load_model_and_tokenizer
-from transformers import Trainer, TrainingArguments
+from transformers import Trainer, TrainingArguments, set_seed
 from icl.utils.load_local import get_model_layer_num
 from icl.util_classes.arg_classes import AttrArgs
 from transformers import HfArgumentParser
@@ -100,6 +100,7 @@ def tokenize_function(texts, tokenizer):
 
 
 if __name__ == "__main__":
+    set_seed(42)
     hf_parser = HfArgumentParser((AttrArgs,))
     args: AttrArgs = hf_parser.parse_args_into_dataclasses()[0]
     prompt = """Q: Given a seed sentence, generate a story that includes a moral. "Once upon a time, a fox was walking through the forest."
@@ -157,7 +158,7 @@ A: {answer}"""
 
     total_attn_weights = []
     for idx, data in tqdm(enumerate(analysis_dataloader)):
-        print(data['input_ids'].shape)
+        # print(data['input_ids'].shape)
         attentionermanger.zero_grad()
         output = model(input_ids=data["input_ids"], attention_mask=data["attention_mask"])
         logits = output["logits"][:, -1, :]
@@ -165,12 +166,13 @@ A: {answer}"""
         loss = F.cross_entropy(logits, label)
         loss.backward()
         # sample_attn_weights = []
+        print(output["logits"].shape)
         for i in range(len(attentionermanger.attention_adapters)):
             saliency = attentionermanger.grad(use_abs=True)[i]
             t = saliency[:, -1, :].squeeze().sort(descending=True)
             top_values = t.values[:3]
             top_indices = t.indices[:3]
-            print(saliency[:, -1, :].sum().item(), top_values, top_indices)
+            print(saliency[:, -1, :].sum().item(), top_values.detach().cpu(), top_indices.detach().cpu())
             for ind in top_indices:
                 print(tokenizer.decode(data["input_ids"].squeeze()[ind]))
             print("#" * 80)
