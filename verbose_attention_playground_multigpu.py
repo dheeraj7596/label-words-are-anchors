@@ -35,7 +35,7 @@ class DataCollatorForSupervisedDataset(object):
         )
         return dict(
             input_ids=input_ids.flip(dims=[-1]),
-            labels=labels,
+            labels=torch.tensor(labels),
             attention_mask=input_ids.ne(self.tokenizer.pad_token_id),
         )
 
@@ -93,7 +93,7 @@ def tokenize_function(texts, tokenizer):
         temp_inputids = new_example["input_ids"]
         for i in range(ind, seq_len):
             inputids = temp_inputids[:, :i].squeeze(dim=0)
-            label = temp_inputids[:, i].squeeze(dim=0)
+            label = temp_inputids[:, i]
             data_dict["input_ids"].append(inputids)
             data_dict["labels"].append(label)
     return data_dict
@@ -160,9 +160,9 @@ A: {answer}"""
         print(data['input_ids'].shape)
         attentionermanger.zero_grad()
         output = model(input_ids=data["input_ids"], attention_mask=data["attention_mask"])
+        logits = output["logits"][:, -1, :]
         label = data['labels']
-        print("LABEL:", data['labels'], data['labels'].shape)
-        loss = F.cross_entropy(output['logits'], label)
+        loss = F.cross_entropy(logits, label)
         loss.backward()
         # sample_attn_weights = []
         for i in range(len(attentionermanger.attention_adapters)):
